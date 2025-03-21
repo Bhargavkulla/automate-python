@@ -6,7 +6,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 // Pull code from GitHub
-                git branch: 'main', url: 'https://github.com/your-repo/python-app.git'
+                git branch: 'main', url: 'https://github.com/Bhargavkulla/automate-python.git'
             }
         }
 
