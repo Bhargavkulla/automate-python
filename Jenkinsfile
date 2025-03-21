@@ -13,25 +13,45 @@ pipeline {
         // Stage 2: Install Dependencies
         stage('Install Dependencies') {
             steps {
-                // Install dependencies using pip
-                sh 'pip install -r requirements.txt'
+                script {
+                    // Create a virtual environment
+                    sh 'python3 -m venv venv'
+                    // Activate virtual environment and install dependencies
+                    sh '''
+                        source venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                    '''
+                }
             }
         }
 
         // Stage 3: Run Tests
         stage('Run Tests') {
             steps {
-                // Run tests using pytest
-                sh 'pytest tests/'
+                script {
+                    // Activate virtual environment and run tests
+                    sh '''
+                        source venv/bin/activate
+                        pytest tests/
+                    '''
+                }
             }
         }
 
-        // Stage 4: Deploy to Staging
+        // Stage 4: Deploy to Staging (Public SSH Key Authentication)
         stage('Deploy to Staging') {
             steps {
-                // Deploy using SSH
-                sshagent(['server-credentials']) {
-                    sh 'scp -r * user@staging-server:/var/www/python-app'
+                script {
+                    // Assuming the SSH private key is stored on the Jenkins agent and the public key is on the server
+                    // Set up the SSH private key path
+                    def sshKeyPath = '/path/to/your/private/key'
+
+                    // Deploy using SCP with public SSH key authentication
+                    sh """
+                        chmod 600 ${sshKeyPath}  # Ensure correct file permissions for the SSH key
+                        scp -i ${sshKeyPath} -r * user@staging-server:/var/www/python-app
+                    """
                 }
             }
         }
