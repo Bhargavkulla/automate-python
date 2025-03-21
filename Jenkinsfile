@@ -2,57 +2,56 @@ pipeline {
     agent any
 
     stages {
-        // Stage 1: Clone Repository
+        // Stage 1: Clone Repository from GitHub
         stage('Clone Repository') {
             steps {
-                // Pull code from GitHub
-                git branch: 'main', url: 'https://github.com/Bhargavkulla/automate-python.git'
+                git url: 'https://github.com/Prsingh9/python-app-build.git', branch: 'main'
             }
         }
 
-        // Stage 2: Install Dependencies
+        // Stage 2: Create Virtual Environment and Install Dependencies
         stage('Install Dependencies') {
             steps {
-                script {
-                    // Create a virtual environment
-                    sh 'python3 -m venv venv'
-                    // Activate virtual environment and install dependencies
-                    sh '''
-                        source venv/bin/activate
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
-                    '''
-                }
+                // Create a virtual environment
+                sh 'python3 -m venv venv'
+                
+                // Install dependencies inside the virtual environment
+                sh './venv/bin/pip install -r requirements.txt'
+                
+                // Ensure setuptools is installed in the virtual environment
+                sh './venv/bin/pip install setuptools'
             }
         }
 
-        // Stage 3: Run Tests
+        // Stage 3: Run Tests (optional)
         stage('Run Tests') {
-            steps {
-                script {
-                    // Activate virtual environment and run tests
-                    sh '''
-                        source venv/bin/activate
-                        pytest tests/
-                    '''
+            when {
+                expression {
+                    return fileExists('tests')
                 }
+            }
+            steps {
+                // Run tests inside the virtual environment
+                sh './venv/bin/pytest tests/'
             }
         }
 
-        // Stage 4: Deploy to Staging (Public SSH Key Authentication)
-        stage('Deploy to Staging') {
+        // Stage 4: Build Artifact (Python package)
+        stage('Build Artifact') {
             steps {
-                script {
-                    // Assuming the SSH private key is stored on the Jenkins agent and the public key is on the server
-                    // Set up the SSH private key path
-                    def sshKeyPath = '/path/to/your/private/key'
+                // Make sure setuptools is explicitly used before building
+                sh './venv/bin/pip install setuptools'
+                
+                // Build the Python package using setup.py
+                sh './venv/bin/python setup.py sdist'
+            }
+        }
 
-                    // Deploy using SCP with public SSH key authentication
-                    sh """
-                        chmod 600 ${sshKeyPath}  # Ensure correct file permissions for the SSH key
-                        scp -i ${sshKeyPath} -r * user@staging-server:/var/www/python-app
-                    """
-                }
+        // Stage 5: Archive Build Artifacts
+        stage('Archive Artifact') {
+            steps {
+                // Archive the generated artifact (e.g., .tar.gz)
+                archiveArtifacts artifacts: 'dist/*.tar.gz', fingerprint: true
             }
         }
     }
